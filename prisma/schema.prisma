@@ -28,12 +28,14 @@ model User {
 }
 
 model Auth {
-  id           String   @id @default(uuid())
-  userId       String   @unique @map("user_id")
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  passwordHash String   @map("password_hash")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id                    String    @id @default(uuid())
+  userId                String    @unique @map("user_id")
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  passwordHash          String    @map("password_hash")
+  refreshToken          String?   @map("refresh_token")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
   @@map("auth")
 }

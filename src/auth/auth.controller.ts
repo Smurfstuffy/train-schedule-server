@@ -2,6 +2,7 @@ import { Body, Controller, Post } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { AuthDto } from './dto/auth.dto';
+import { RefreshDto } from './dto/refresh.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -24,5 +25,22 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   login(@Body() dto: AuthDto) {
     return this.authService.login(dto.email, dto.password);
+  }
+
+  @Post('refresh')
+  @ApiOperation({ summary: 'Get new access token using refresh token' })
+  @ApiBody({ type: RefreshDto })
+  @ApiResponse({ status: 201, description: 'New tokens issued' })
+  @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
+  refresh(@Body() dto: RefreshDto) {
+    return this.authService.refresh(dto.refreshToken);
+  }
+
+  @Post('logout')
+  @ApiOperation({ summary: 'Invalidate refresh token' })
+  @ApiBody({ type: RefreshDto })
+  @ApiResponse({ status: 201, description: 'Logged out' })
+  logout(@Body() dto: RefreshDto) {
+    return this.authService.logout(dto.refreshToken);
   }
 }
