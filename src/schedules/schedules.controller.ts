@@ -6,12 +6,14 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -21,6 +23,7 @@ import { Role } from '../users/enums/role.enum';
 import { SchedulesService } from './schedules.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
+import { FilterSchedulesDto } from './dto/filter-schedules.dto';
 
 @ApiTags('schedules')
 @ApiBearerAuth()
@@ -31,11 +34,18 @@ export class SchedulesController {
 
   @Get()
   @Roles(Role.Admin, Role.User)
-  @ApiOperation({ summary: 'List all schedules' })
+  @ApiOperation({
+    summary:
+      'List schedules (optional filters: dateFrom, dateTo, routeName, trainTypeId)',
+  })
+  @ApiQuery({ name: 'dateFrom', required: false })
+  @ApiQuery({ name: 'dateTo', required: false })
+  @ApiQuery({ name: 'routeName', required: false })
+  @ApiQuery({ name: 'trainTypeId', required: false })
   @ApiResponse({ status: 200, description: 'List of schedules' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
-  findAll() {
-    return this.schedulesService.findAll();
+  findAll(@Query() filters: FilterSchedulesDto) {
+    return this.schedulesService.findAll(filters);
   }
 
   @Get(':id')
