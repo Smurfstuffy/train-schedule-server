@@ -4,6 +4,7 @@ import { AuthModule } from './auth/auth.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { SchedulesModule } from './schedules/schedules.module';
+import { TrainsModule } from './trains/trains.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -14,6 +15,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     SchedulesModule,
     FavoritesModule,
+    TrainsModule,
   ],
   controllers: [],
   providers: [],
