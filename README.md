@@ -31,6 +31,24 @@
 $ npm install
 ```
 
+Copy `.env.example` to `.env` (if present) and set `DATABASE_URL` for PostgreSQL. Then:
+
+```bash
+$ npx prisma migrate deploy
+$ npm run prisma:seed
+```
+
+## Demo credentials for testing
+
+After running the seed, you can sign in with:
+
+| Role  | Email               | Password  |
+|-------|---------------------|-----------|
+| Admin | `admin@example.com` | `admin123` |
+| User  | `user@example.com`  | `user123`  |
+
+Use **POST /auth/login** with JSON body `{ "email": "...", "password": "..." }` to get an access token for protected endpoints.
+
 ## Compile and run the project
 
 ```bash
