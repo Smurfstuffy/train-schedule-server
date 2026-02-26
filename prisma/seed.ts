@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { TrainType } from '../src/schedules/enums/train-type.enum';
+import { TrainType } from '../src/trains/enums/train-type.enum';
 
 const prisma = new PrismaClient();
 
