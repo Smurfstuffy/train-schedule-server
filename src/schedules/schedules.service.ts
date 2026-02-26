@@ -3,9 +3,11 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
+import { FilterSchedulesDto } from './dto/filter-schedules.dto';
 
 @Injectable()
 export class SchedulesService {
@@ -25,11 +27,37 @@ export class SchedulesService {
     });
   }
 
-  async findAll() {
+  async findAll(filters?: FilterSchedulesDto) {
+    const where = this.buildWhere(filters);
     return this.prisma.schedule.findMany({
-      include: { train: true },
+      where,
+      include: { train: { include: { trainType: true } } },
       orderBy: { departureDate: 'asc' },
     });
+  }
+
+  private buildWhere(filters?: FilterSchedulesDto): Prisma.ScheduleWhereInput {
+    if (!filters) return {};
+    const conditions: Prisma.ScheduleWhereInput[] = [];
+    if (filters.dateFrom) {
+      const from = new Date(filters.dateFrom);
+      from.setUTCHours(0, 0, 0, 0);
+      conditions.push({ departureDate: { gte: from } });
+    }
+    if (filters.dateTo) {
+      const to = new Date(filters.dateTo);
+      to.setUTCHours(23, 59, 59, 999);
+      conditions.push({ departureDate: { lte: to } });
+    }
+    if (filters.routeName?.trim()) {
+      conditions.push({
+        routeName: { contains: filters.routeName.trim(), mode: 'insensitive' },
+      });
+    }
+    if (filters.trainTypeId) {
+      conditions.push({ train: { trainTypeId: filters.trainTypeId } });
+    }
+    return conditions.length ? { AND: conditions } : {};
   }
 
   async findOne(id: string) {
