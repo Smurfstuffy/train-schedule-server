@@ -39,3 +39,37 @@ model Auth {
 
   @@map("auth")
 }
+
+model TrainType {
+  id    String  @id @default(uuid())
+  name  String  @unique
+  trains Train[]
+
+  @@map("train_types")
+}
+
+model Train {
+  id          String     @id @default(uuid())
+  trainTitle  String     @map("train_title")
+  trainTypeId String     @map("train_type_id")
+  trainType   TrainType  @relation(fields: [trainTypeId], references: [id], onDelete: Restrict)
+  schedules   Schedule[]
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  @@map("trains")
+}
+
+model Schedule {
+  id             String   @id @default(uuid())
+  trainId        String   @map("train_id")
+  train          Train    @relation(fields: [trainId], references: [id], onDelete: Cascade)
+  routeName      String   @map("route_name")
+  departureDate  DateTime @map("departure_date")
+  finishedDate   DateTime @map("finished_date")
+  stops         String[]  @default([])
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("schedules")
+}
