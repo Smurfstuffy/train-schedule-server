@@ -1,7 +1,14 @@
 import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 import { TrainType } from '../src/trains/enums/train-type.enum';
+import { Role } from '../src/users/enums/role.enum';
 
 const prisma = new PrismaClient();
+
+const DEMO_CREDENTIALS = [
+  { email: 'admin@example.com', password: 'admin123', role: Role.Admin },
+  { email: 'user@example.com', password: 'user123', role: Role.User },
+] as const;
 
 const PREDEFINED_TRAINS: { trainTitle: string; trainType: TrainType }[] = [
   { trainTitle: 'Intercity 101', trainType: TrainType.Intercity },
@@ -17,6 +24,46 @@ const PREDEFINED_TRAINS: { trainTitle: string; trainType: TrainType }[] = [
 ];
 
 async function main() {
+  // Ensure roles exist
+  for (const name of Object.values(Role)) {
+    await prisma.role.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    });
+  }
+
+  const roles = await prisma.role.findMany();
+  const roleById = Object.fromEntries(roles.map(r => [r.name, r.id]));
+
+  // Demo users for testing (idempotent: create or reset password)
+  for (const { email, password, role } of DEMO_CREDENTIALS) {
+    const passwordHash = await bcrypt.hash(password, 10);
+    const roleId = roleById[role];
+    if (!roleId) throw new Error(`Role not found: ${role}`);
+
+    const existing = await prisma.user.findUnique({
+      where: { email },
+      include: { auth: true },
+    });
+
+    if (existing) {
+      await prisma.auth.update({
+        where: { userId: existing.id },
+        data: { passwordHash },
+      });
+    } else {
+      await prisma.user.create({
+        data: {
+          email,
+          roleId,
+          auth: { create: { passwordHash } },
+        },
+      });
+    }
+  }
+
+  // Train types and trains
   const trainTypeNames = Object.values(TrainType);
   for (const name of trainTypeNames) {
     await prisma.trainType.upsert({
