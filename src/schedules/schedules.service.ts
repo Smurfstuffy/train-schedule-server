@@ -5,17 +5,21 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { SchedulesGateway } from './schedules.gateway';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
 import { FilterSchedulesDto } from './dto/filter-schedules.dto';
 
 @Injectable()
 export class SchedulesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private schedulesGateway: SchedulesGateway,
+  ) {}
 
   async create(dto: CreateScheduleDto) {
     await this.ensureTrainExists(dto.trainId);
-    return this.prisma.schedule.create({
+    const schedule = await this.prisma.schedule.create({
       data: {
         trainId: dto.trainId,
         routeName: dto.routeName,
@@ -25,6 +29,10 @@ export class SchedulesService {
       },
       include: { train: true },
     });
+    this.schedulesGateway.emitCreated(
+      schedule as unknown as Record<string, unknown>,
+    );
+    return schedule;
   }
 
   async findAll(filters?: FilterSchedulesDto) {
@@ -32,7 +40,7 @@ export class SchedulesService {
     return this.prisma.schedule.findMany({
       where,
       include: { train: { include: { trainType: true } } },
-      orderBy: { departureDate: 'asc' },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -83,19 +91,25 @@ export class SchedulesService {
       }),
       ...(dto.stops !== undefined && { stops: dto.stops }),
     };
-    return this.prisma.schedule.update({
+    const schedule = await this.prisma.schedule.update({
       where: { id },
       data,
       include: { train: true },
     });
+    this.schedulesGateway.emitUpdated(
+      schedule as unknown as Record<string, unknown>,
+    );
+    return schedule;
   }
 
   async remove(id: string) {
     await this.findOne(id);
-    return this.prisma.schedule.delete({
+    const schedule = await this.prisma.schedule.delete({
       where: { id },
       include: { train: true },
     });
+    this.schedulesGateway.emitDeleted(id);
+    return schedule;
   }
 
   private async ensureTrainExists(trainId: string) {
