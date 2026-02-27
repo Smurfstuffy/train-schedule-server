@@ -23,6 +23,38 @@ const PREDEFINED_TRAINS: { trainTitle: string; trainType: TrainType }[] = [
   { trainTitle: 'High-Speed 2', trainType: TrainType.HighSpeed },
 ];
 
+const ROUTES: { routeName: string; stops: string[] }[] = [
+  {
+    routeName: 'Kyiv - Lviv',
+    stops: ['Kyiv-Pasazhyrskyi', 'Vinnytsia', 'Ternopil', 'Lviv'],
+  },
+  {
+    routeName: 'Kyiv - Odesa',
+    stops: ['Kyiv-Pasazhyrskyi', 'Vinnytsia', 'Odesa-Holovna'],
+  },
+  {
+    routeName: 'Kyiv - Kharkiv',
+    stops: ['Kyiv-Pasazhyrskyi', 'Poltava', 'Kharkiv-Pasazhyrskyi'],
+  },
+  { routeName: 'Lviv - Odesa', stops: ['Lviv', 'Vinnytsia', 'Odesa-Holovna'] },
+  {
+    routeName: 'Kharkiv - Lviv',
+    stops: ['Kharkiv-Pasazhyrskyi', 'Kyiv-Pasazhyrskyi', 'Lviv'],
+  },
+  {
+    routeName: 'Kyiv - Dnipro',
+    stops: ['Kyiv-Pasazhyrskyi', 'Dnipro-Holovnyi'],
+  },
+  {
+    routeName: 'Ivano-Frankivsk - Kyiv',
+    stops: ['Ivano-Frankivsk', 'Lviv', 'Kyiv-Pasazhyrskyi'],
+  },
+  {
+    routeName: 'Odesa - Kyiv',
+    stops: ['Odesa-Holovna', 'Vinnytsia', 'Kyiv-Pasazhyrskyi'],
+  },
+];
+
 async function main() {
   // Ensure roles exist
   for (const name of Object.values(Role)) {
@@ -83,6 +115,38 @@ async function main() {
   });
 
   await prisma.train.createMany({ data: trainData, skipDuplicates: true });
+
+  // Create 20 schedules (idempotent: only add up to 20 total)
+  const SCHEDULE_COUNT = 20;
+  const existingCount = await prisma.schedule.count();
+  const toCreate = Math.max(0, SCHEDULE_COUNT - existingCount);
+  if (toCreate > 0) {
+    const trains = await prisma.train.findMany({ select: { id: true } });
+    if (trains.length === 0) throw new Error('No trains found for schedules');
+
+    const baseDate = new Date();
+    baseDate.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < toCreate; i++) {
+      const train = trains[i % trains.length];
+      const route = ROUTES[i % ROUTES.length];
+      const departureDate = new Date(baseDate);
+      departureDate.setDate(departureDate.getDate() + (i % 14)); // spread over 2 weeks
+      departureDate.setHours(6 + (i % 12), 0, 0, 0); // 06:00–18:00
+      const finishedDate = new Date(departureDate);
+      finishedDate.setHours(finishedDate.getHours() + 2 + (i % 6), 0, 0, 0); // 2–8h later
+
+      await prisma.schedule.create({
+        data: {
+          trainId: train.id,
+          routeName: route.routeName,
+          departureDate,
+          finishedDate,
+          stops: route.stops,
+        },
+      });
+    }
+  }
 }
 
 main()
